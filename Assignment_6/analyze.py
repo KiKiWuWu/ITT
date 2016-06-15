@@ -15,6 +15,38 @@ import wiimote_node
 WM_ADDRESS = "18:2A:7B:F3:F8:F5"  # default address
 
 
+class CustomNormalVectorNode(CtrlNode):
+    nodeName = "CustomNormalVector"
+
+    uiTemplate = []  # required; even empty; endless recursion otherwise o.O
+
+    def __init__(self, node_name):
+        terminals = {
+            'x_axis_in': dict(io='in'),
+            'z_axis_in': dict(io='in'),
+            'x_rotation_out': dict(io='out'),
+            'z_rotation_out': dict(io='out')
+        }
+
+        CtrlNode.__init__(self, node_name, terminals=terminals)
+
+    def process(self, **kwds):
+        x_value = kwds['x_axis_in'] - 512
+        z_value = kwds['z_axis_in'] - 512
+
+        angle = np.arctan2(x_value, z_value)
+
+        x_rotation_value = np.sin(angle)
+        z_rotation_value = np.cos(angle)
+
+        return {
+            'x_rotation_out': np.array([0, x_rotation_value]),
+            'z_rotation_out': np.array([0, z_rotation_value])
+        }
+
+fclib.registerNodeType(CustomNormalVectorNode, [('Filter',)])
+
+
 def input_from_cmd():
     """
     checks if cmd args are exactly 2 in number
@@ -51,6 +83,7 @@ def setup_node(fc, node_name, x, y, pw=None):
     :param x: the x-position in the flowchart
     :param y: the y-position in the flowchart
     :param pw: a PlotWidget, if a PlotWidget-Node is to be constructed
+    :param wm_address: the mac address to the wiimote
     :return: the newly constructed node
     """
     node = fc.createNode(node_name, pos=(x, y))
@@ -98,14 +131,12 @@ def get_plot_widget_nodes(fc, layout):
     pwx = add_plot_widget_to_layout(layout, 0, 1)
     pwy = add_plot_widget_to_layout(layout, 1, 1)
     pwz = add_plot_widget_to_layout(layout, 2, 1)
-    pww = add_plot_widget_to_layout(layout, 3, 1)
 
     pw_x_node = setup_node(fc, 'PlotWidget', 300, 0, pwx)
     pw_y_node = setup_node(fc, 'PlotWidget', 300, 150, pwy)
     pw_z_node = setup_node(fc, 'PlotWidget', 300, -150, pwz)
-    pw_w_node = setup_node(fc, 'PlotWidget', 0, -300, pww)
 
-    return pw_x_node, pw_y_node, pw_z_node, pw_w_node
+    return pw_x_node, pw_y_node, pw_z_node
 
 
 def main():
@@ -120,9 +151,10 @@ def main():
 
     win, cw, lt, fc = setup_displaying_of_plots()
 
-    pw_x_node, pw_y_node, pw_z_node, pw_w_node = get_plot_widget_nodes(fc, lt)
+    pw_x_node, pw_y_node, pw_z_node = get_plot_widget_nodes(fc, lt)
 
     wiimote_node_ = setup_node(fc, 'Wiimote', 0, 0)
+    wiimote_node_.text.setText(sys.argv[1])
 
     buffer_node_x = setup_node(fc, 'Buffer', 150, 0)
     buffer_node_y = setup_node(fc, 'Buffer', 150, 150)
@@ -141,6 +173,30 @@ def main():
     fc.connectTerminals(filter_node_mean['Out'], pw_x_node['In'])
     fc.connectTerminals(filter_node_gaussian['Out'], pw_y_node['In'])
     fc.connectTerminals(filter_node_median['Out'], pw_z_node['In'])
+
+    # optional node implementation; also see CustomNormalVectorNode class
+    nv_pw = pg.PlotWidget()
+
+    nv_pw.setXRange(-2, 2)
+    nv_pw.setYRange(-2, 2)
+
+    lt.addWidget(nv_pw, 3, 1)
+
+    nv_pc = fc.createNode('PlotCurve', pos=(-100, 150))
+    nv_pw_node = fc.createNode('PlotWidget', pos=(-100, 300))
+
+    nv_pw_node.setPlot(nv_pw)
+
+    nvn = fc.createNode('CustomNormalVector', 'CustomNormalVectorNode',
+                        pos=(-100, 450))
+
+    fc.connectTerminals(nv_pc['plot'], nv_pw_node['In'])
+    fc.connectTerminals(wiimote_node_['accelX'], nvn['x_axis_in'])
+    fc.connectTerminals(wiimote_node_['accelZ'], nvn['z_axis_in'])
+    fc.connectTerminals(nvn['x_rotation_out'], nv_pc['x'])
+    fc.connectTerminals(nvn['z_rotation_out'], nv_pc['y'])
+
+    # end of optional node implementation
 
     win.show()
 
