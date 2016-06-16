@@ -31,20 +31,16 @@ class CustomNormalVectorNode(CtrlNode):
         CtrlNode.__init__(self, node_name, terminals=terminals)
 
     def process(self, **kwds):
-        x_value = kwds['x_axis_in'] - 512
-        z_value = kwds['z_axis_in'] - 512
 
-        angle = np.arctan2(x_value, z_value)
-
-        x_rotation_value = np.sin(angle)
-        z_rotation_value = np.cos(angle)
+        out = [kwds['x_axis_in'] - 512, kwds['z_axis_in'] - 512]
 
         return {
-            'x_rotation_out': np.array([0, x_rotation_value]),
-            'z_rotation_out': np.array([0, z_rotation_value])
+            'x_rotation_out': np.array([0, out[0]]),
+            'z_rotation_out': np.array([0, out[1]])
         }
 
-fclib.registerNodeType(CustomNormalVectorNode, [('Filter',)])
+
+fclib.registerNodeType(CustomNormalVectorNode, [('NVN',)])
 
 
 def input_from_cmd():
@@ -177,11 +173,11 @@ def main():
     # optional node implementation; also see CustomNormalVectorNode class
     nv_pw = pg.PlotWidget()
 
-    nv_pw.setXRange(-2, 2)
-    nv_pw.setYRange(-2, 2)
+    # nv_pw.setXRange(-2, 2)
 
     lt.addWidget(nv_pw, 3, 1)
-
+    nv_pw.setXRange(-1, 1)
+    nv_pw.setYRange(-1, 1)
     nv_pc = fc.createNode('PlotCurve', pos=(-100, 150))
     nv_pw_node = fc.createNode('PlotWidget', pos=(-100, 300))
 
@@ -190,11 +186,11 @@ def main():
     nvn = fc.createNode('CustomNormalVector', 'CustomNormalVectorNode',
                         pos=(-100, 450))
 
-    fc.connectTerminals(nv_pc['plot'], nv_pw_node['In'])
     fc.connectTerminals(wiimote_node_['accelX'], nvn['x_axis_in'])
     fc.connectTerminals(wiimote_node_['accelZ'], nvn['z_axis_in'])
     fc.connectTerminals(nvn['x_rotation_out'], nv_pc['x'])
     fc.connectTerminals(nvn['z_rotation_out'], nv_pc['y'])
+    fc.connectTerminals(nv_pc['plot'], nv_pw_node['In'])
 
     # end of optional node implementation
 
