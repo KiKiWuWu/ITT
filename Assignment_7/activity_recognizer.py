@@ -1,5 +1,13 @@
+#!/usr/bin/env python3
+# coding: utf-8
+# -*- coding: utf-8 -*-
+
 from PyQt5 import uic, QtGui, QtCore, Qt
 import sys
+import webbrowser as wb
+import sh
+
+AAAYYYEEE_MACARENA = 'https://www.youtube.com/watch?v=XiBYM6g8Tck'
 
 
 class CustomListWidgetItem(Qt.QListWidgetItem):
@@ -74,6 +82,9 @@ class Window(Qt.QMainWindow):
 
     def use(self):
         print("Usage Required")
+        # self.on_shake()
+        # self.on_key_unlock()
+        self.on_slash()
 
     def retrain(self):
         print("New Training Required")
@@ -83,6 +94,26 @@ class Window(Qt.QMainWindow):
             self.gesture_list_widget.row(
                 self.gesture_list_widget.currentItem()))
 
+    def on_shake(self):
+        wb.open_new(AAAYYYEEE_MACARENA)
+
+    def on_whip(self):
+        # change ui color based on sensor
+        pass
+
+    def on_key_unlock(self):
+        # open app
+        run_external_application = sh.Command("./dummy.py")
+        print(run_external_application(_bg=False))
+
+    def on_key_lock(self):
+        # ???
+        pass
+
+    def on_slash(self):
+        # close this app (not happy with this)
+        sys.exit(0)
+        pass
 
 def main():
     app = Qt.QApplication(sys.argv)
