@@ -8,15 +8,16 @@ import time
 
 WM_ADDRESS = "18:2A:7B:F3:F8:F5"  # default address
 
-ACTIVITIES = Enum('ACTIVITIES', 'shake, whip, unlock, lock, slash')
+ACTIVITIES = Enum('ACTIVITIES', 'shake, whip, idle, wiggle, unlock, lock')
 
 
 class Activity(Enum):
     shake = 1
     whip = 2
-    unlock = 3 # 3 gestures are needed -- most difficult to learn
-    lock = 4 # 3 gestures are needed -- most difficult to learn
-    slash = 5
+    idle = 4
+    unlock = 5 # 3 gestures are needed -- most difficult to learn
+    lock = 6 # 3 gestures are needed -- most difficult to learn
+    wiggle = 3
 
 
 def gather_data(activity):
@@ -38,7 +39,7 @@ def gather_data(activity):
         elif is_pressed:
             break
 
-        time.sleep(0.05)
+        time.sleep(0.02)
 
     return data
 
@@ -60,7 +61,7 @@ def main():
 
     print('a_id;x_accel;y_accel;z_accel;timestamp')
 
-    data = gather_data(Activity.shake.value)
+    data = gather_data(Activity.wiggle.value)
 
     for l in data:
         out = list_to_string_for_csv(l)

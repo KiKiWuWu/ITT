@@ -6,7 +6,7 @@ COOL_GOT_QUOTE = "WHERE ARE MY DRAGONS"
 
 
 def main():
-    print(COOL_GOT_QUOTE + "(Called from other application")
+    print(COOL_GOT_QUOTE + "\nCalled from other application(dummy.py)")
 
 
 if __name__ == '__main__':

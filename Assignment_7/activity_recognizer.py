@@ -6,18 +6,75 @@ from PyQt5 import uic, QtGui, QtCore, Qt
 import sys
 import webbrowser as wb
 import sh
+from sklearn import svm
+import numpy as np
+import wiimote
+import time
+import activity_classifier as ac
 
-AAAYYYEEE_MACARENA = 'https://www.youtube.com/watch?v=XiBYM6g8Tck'
+# FOR THE LULZ
+TAYLOR_SWIFT = 'https://www.youtube.com/watch?v=nfWlot6h_JM'
+
+
+class WiimoteThread(QtCore.QThread):
+    """
+    simple thread class for concurrent wiimote accelerometer data retrieval
+    """
+
+    update_trigger = QtCore.pyqtSignal()
+
+    def __init__(self):
+        """
+        constructor
+
+        :return: void
+        """
+
+        super(WiimoteThread, self).__init__()
+        self.is_looping = True
+
+    def run(self):
+        """
+        looped action of the thread
+
+        :return: void
+        """
+
+        while self.is_looping:
+            time.sleep(0.02)  # sampling rate of 50 Hz
+            self.update_trigger.emit()
 
 
 class CustomListWidgetItem(Qt.QListWidgetItem):
+    """
+    class responsible for the custom list widget item
+    """
+
     def __init__(self, name):
+        """
+        constructor
+
+        :param name: the name of the activity
+
+        :return: void
+        """
         super(CustomListWidgetItem, self).__init__(name)
         # add item specific data like gesture, trainings data, etc.
 
 
 class Window(Qt.QMainWindow):
+    """
+    class responsible for the UI
+    """
+
     def __init__(self):
+        """
+        constructor
+        UI-elements setup
+
+        :return: void
+        """
+
         super(Window, self).__init__()
         self.win = uic.loadUi("activity_recognizer.ui")
 
@@ -30,10 +87,18 @@ class Window(Qt.QMainWindow):
         self.remove_action = None
 
         self.is_trained = False
+        self.is_pressed = False
+        self.is_classified = False
+
+        self.gesture_data = []
 
         self.add_btn.clicked.connect(self.add)
 
         self.setup_gesture_list_widget()
+        self.wm = wiimote.connect("18:2A:7B:F3:F8:F5")
+        self.wiimote_thread = WiimoteThread()
+        self.wiimote_thread.update_trigger.connect(self.get_wiimote_input)
+        self.wiimote_thread.start()
         self.win.show()
 
     def add(self):
@@ -82,9 +147,6 @@ class Window(Qt.QMainWindow):
 
     def use(self):
         print("Usage Required")
-        # self.on_shake()
-        # self.on_key_unlock()
-        self.on_slash()
 
     def retrain(self):
         print("New Training Required")
@@ -95,25 +157,41 @@ class Window(Qt.QMainWindow):
                 self.gesture_list_widget.currentItem()))
 
     def on_shake(self):
-        wb.open_new(AAAYYYEEE_MACARENA)
+        wb.open_new(TAYLOR_SWIFT)
 
     def on_whip(self):
-        # change ui color based on sensor
-        pass
-
-    def on_key_unlock(self):
-        # open app
         run_external_application = sh.Command("./dummy.py")
         print(run_external_application(_bg=False))
 
-    def on_key_lock(self):
-        # ???
+    def on_wiggle(self):
+        print("System exit requested (wiggle)")
+        # sys.exit(0)
         pass
 
-    def on_slash(self):
-        # close this app (not happy with this)
-        sys.exit(0)
-        pass
+    def get_wiimote_input(self):
+        if self.wm.buttons["A"]:
+            x, y, z = self.wm.accelerometer
+            self.is_pressed = True
+            self.is_classified = False
+            self.gesture_data.append([x, y, z])
+        elif self.is_pressed and not self.is_classified:
+            self.classify()
+            self.gesture_data.clear()
+
+    def classify(self):
+        self.is_classified = True
+        classifier = ac.Classifier('data.csv')
+        gesture = classifier.classify(self.gesture_data)
+
+        if ac.SHAKE == gesture:
+            self.on_shake()
+        elif ac.WHIP == gesture:
+            self.on_whip()
+        elif ac.WIGGLE == gesture:
+            self.on_wiggle()
+        elif ac.NOTHING == gesture:
+            print("IDLE")
+
 
 def main():
     app = Qt.QApplication(sys.argv)
