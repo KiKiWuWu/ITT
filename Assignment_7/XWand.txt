@@ -1,0 +1,42 @@
+1. How is the XWand tracked (provide all relevant details)?
+
+
+To track the XWand precisely the position and the orientation of the device must be determined.
+The yaw (orientation) is computed by the accelerometer and the magnetometer outputs. (pitch and roll values have to be in a motionless mode!)
+However yaw calculation could be false due to magnetic field distortions (especially indoor), misalignments or imprecise calibrations.
+
+Setting the exact position of the XWand costs more effort because the trained room needs to be equipped with at least two video cameras which contain an IR pass filter. Only then the 3-d position can be detected through triangulation of precedent results. Additionally a marker can be put on the wand to improve the positioning.
+
+Practically, the user needs to point at a target with the XWand and remain motionless in that position to select the target. Taping a laser pointer to the XWand can improve the pointing accuracy of the wand to locate a target. Audio feedback is given when the target changes; plus the green LED lights up when a target is selected.
+
+Then he can interact with the selected object by executing defined gestures, pressing the wand button or with vocal commands. 
+
+
+
+
+
+
+2. How are gestures recognized?
+
+
+Simply put, by simply looking for trends and peaks in the sensor values or their derivatives. To easily differenciate between the starting and the ending point of a gesture the user has to press the wand button while gesturing. The gestures are recognized via a simple gesture recognizer in conjunction with a strong context model. As mentioned before the sensor values or their derivatives are checked whether they exceed thresholds which were previously defined. According to the authors this way is sufficient enough for robust gesture recognition. 
+
+
+
+
+
+
+3. What are the technical differences between the XWand and the WiiMote?
+
+
+The XWand uses a 2-axes accelerometer for roll and pitch determination and has to compensate the lack of the 3rd axes with another sensor, a 3-axes magnetoresistive permalloy magnetometer. This allows the device to calculate the yaw angle. The wiimote uses a 3-axes accelerometer and has no magnetometer. Also the XWand has green and red LEDs instead of just blue ones and includes a FM transceiver.
+But unlike the Wiimote the XWand provides only one press button (Wiimote has eight buttons).
+Another difference is how the devices handle their IR light component. The XWand is the IR light source and needs to be tracked by two cameras in the same room whereas the wiimote is the IR light receiver with its built-in IR camera. This also means that the wiimote applies the IR filter itself and the cameras tracking the XWand handle the filtering for the XWand. Therefore the effective interaction zone of the Wiimote is smaller and more limited when compared to the XWand.
+Both devices have a built-in gyroscope. The XWand's operates with 1-axis and the wiimote's utilizes a 3-axes type of that sensor.
+On a side note it is interesting that the XWand requires more energy in order to operate. The XWand needs four AAA batteries, while the Wiimote only requires two AA batteries. 
+The paper mentions nothing about a vibration motor built into the XWand, which is the case for the Wiimote.
+
+A grave benefit of the XWand concerning usability problems is the combination of gestures, button presses and vocal commands to predict the users intentions most accurately (Bayes Network).
+
+Even so the XWand has many advantages the whole environment setup for it to work is much more complex. Especially because it requires two calibrated video cameras and a wand world model including all the trained targets. And of course the whole environment must be known beforehand. 
+Furthermore the feature of speech recognition give a lot more possibilities to the user than the Wiimote can give.
