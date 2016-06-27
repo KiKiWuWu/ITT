@@ -14,6 +14,7 @@ import activity_classifier as ac
 
 # FOR THE LULZ
 TAYLOR_SWIFT = 'https://www.youtube.com/watch?v=nfWlot6h_JM'
+WM_ADDRESS = '18:2A:7B:F3:F8:F5'
 
 
 class WiimoteThread(QtCore.QThread):
@@ -45,23 +46,6 @@ class WiimoteThread(QtCore.QThread):
             self.update_trigger.emit()
 
 
-class CustomListWidgetItem(Qt.QListWidgetItem):
-    """
-    class responsible for the custom list widget item
-    """
-
-    def __init__(self, name):
-        """
-        constructor
-
-        :param name: the name of the activity
-
-        :return: void
-        """
-        super(CustomListWidgetItem, self).__init__(name)
-        # add item specific data like gesture, trainings data, etc.
-
-
 class Window(Qt.QMainWindow):
     """
     class responsible for the UI
@@ -70,7 +54,7 @@ class Window(Qt.QMainWindow):
     def __init__(self):
         """
         constructor
-        UI-elements setup
+        UI-elements setup and variables setup
 
         :return: void
         """
@@ -81,43 +65,68 @@ class Window(Qt.QMainWindow):
         self.gesture_list_widget = self.win.listWidget
 
         self.add_btn = self.win.btn_add
+        self.action_btn = self.win.btn_action
+        self.connect_btn = self.win.btn_connect
+
+        self.address_le = self.win.le_address
+
+        self.recognition_l = self.win.l_recognition
 
         self.use_action = None
         self.retrain_action = None
         self.remove_action = None
 
-        self.is_trained = False
         self.is_pressed = False
         self.is_classified = False
+        self.uses_gestures = False
+        self.recognizes_shake = False
+        self.recognizes_whip = False
+        self.recognizes_wiggle = False
+        self.is_retraining = False
+
+        self.classifier = ac.Classifier('data.csv')
 
         self.gesture_data = []
 
         self.add_btn.clicked.connect(self.add)
+        self.action_btn.clicked.connect(self.set_gesture_action)
+        self.connect_btn.clicked.connect(self.connect_wiimote)
 
         self.setup_gesture_list_widget()
-        self.wm = wiimote.connect("18:2A:7B:F3:F8:F5")
+        self.wm = None
+
+        self.connect_wiimote()
+
         self.wiimote_thread = WiimoteThread()
         self.wiimote_thread.update_trigger.connect(self.get_wiimote_input)
         self.wiimote_thread.start()
         self.win.show()
 
+    def connect_wiimote(self):
+            try:
+                self.wm = wiimote.connect(self.address_le.text())
+            except Exception:
+                pass
+
     def add(self):
-        gesture_name, is_ok = \
-            Qt.QInputDialog.getText(self.win, 'Input Dialog',
-                                    'Enter Gesture Name:')
 
-        if not is_ok:
-            print('Error: Could not add required gesture (insufficient name!)')
+        gestures = (ac.SHAKE, ac.WHIP, ac.WIGGLE)
+
+        gesture, ok = Qt.QInputDialog.getItem(self, 'select', 'list',
+                                              gestures, 0, False)
+
+        if gesture == ac.SHAKE:
+            self.recognizes_shake = True
+        if gesture == ac.WHIP:
+            self.recognizes_whip = True
+        if gesture == ac.WIGGLE:
+            self.recognizes_wiggle = True
+
+        if not ok:
+            print('Error: Could not add required gesture')
             return
 
-        is_ok = self.train()  # perform required training
-
-        if not is_ok:
-            print('Error: Could not add required gesture (training failed!)')
-            return
-
-        # add data to CustomListWidget
-        self.gesture_list_widget.addItem(CustomListWidgetItem(gesture_name))
+        self.gesture_list_widget.addItem(Qt.QListWidgetItem(gesture))
 
     def self_show(self):
         print(self.list_widget.currentItem().text())
@@ -129,68 +138,108 @@ class Window(Qt.QMainWindow):
         self.add_context_menu_actions()
 
     def add_context_menu_actions(self):
-        self.use_action = Qt.QAction("Use Gesture", None)
-        self.use_action.triggered.connect(self.use)
         self.retrain_action = Qt.QAction("Retrain Gesture", None)
         self.retrain_action.triggered.connect(self.retrain)
         self.remove_action = Qt.QAction("Remove Gesture", None)
         self.remove_action.triggered.connect(self.remove)
 
-        self.gesture_list_widget.addAction(self.use_action)
         self.gesture_list_widget.addAction(self.retrain_action)
         self.gesture_list_widget.addAction(self.remove_action)
 
-    def train(self):
-        print("Training Required")
-
-        return True
-
-    def use(self):
-        print("Usage Required")
-
     def retrain(self):
-        print("New Training Required")
+        self.is_retraining = True
 
     def remove(self):
+        gesture = self.gesture_list_widget.currentItem().text()
+
         self.gesture_list_widget.takeItem(
             self.gesture_list_widget.row(
                 self.gesture_list_widget.currentItem()))
 
+        if gesture == ac.SHAKE:
+            self.recognizes_shake = False
+        if gesture == ac.WHIP:
+            self.recognizes_whip = False
+        if gesture == ac.WIGGLE:
+            self.recognizes_wiggle = False
+
     def on_shake(self):
+        self.recognition_l.setText(ac.SHAKE)
         wb.open_new(TAYLOR_SWIFT)
 
     def on_whip(self):
+        self.recognition_l = ac.WHIP
         run_external_application = sh.Command("./dummy.py")
         print(run_external_application(_bg=False))
 
     def on_wiggle(self):
+        self.recognition_l = ac.WIGGLE
         print("System exit requested (wiggle)")
         # sys.exit(0)
-        pass
 
     def get_wiimote_input(self):
-        if self.wm.buttons["A"]:
-            x, y, z = self.wm.accelerometer
-            self.is_pressed = True
-            self.is_classified = False
-            self.gesture_data.append([x, y, z])
-        elif self.is_pressed and not self.is_classified:
-            self.classify()
-            self.gesture_data.clear()
+        if self.wm is not None and self.uses_gestures:
+            if self.wm.buttons["A"]:
+                x, y, z = self.wm.accelerometer
+                self.is_pressed = True
+                self.is_classified = False
+                self.gesture_data.append([float(x), float(y), float(z)])
+            elif self.is_pressed and not self.is_classified:
+                if not self.is_retraining:
+                    self.classify()
+                    self.gesture_data.clear()
+                else:
+                    data = self.gesture_data
+                    print(data)
+
+                    activity = self.gesture_list_widget.currentItem().text()
+
+                    self.classifier.train(None, data, activity)
+
+                    self.is_classified = True
+                    self.is_retraining = False
+                    self.gesture_data.clear()
 
     def classify(self):
         self.is_classified = True
-        classifier = ac.Classifier('data.csv')
-        gesture = classifier.classify(self.gesture_data)
+        gesture = self.classifier.classify(self.gesture_data)
 
-        if ac.SHAKE == gesture:
+        if ac.SHAKE == gesture and self.recognizes_shake:
             self.on_shake()
-        elif ac.WHIP == gesture:
+        elif ac.WHIP == gesture and self.recognizes_whip:
             self.on_whip()
-        elif ac.WIGGLE == gesture:
+        elif ac.WIGGLE == gesture and self.recognizes_wiggle:
             self.on_wiggle()
-        elif ac.NOTHING == gesture:
-            print("IDLE")
+
+    def set_gesture_action(self):
+        if self.wm is None:
+            print('connect the wiimote first')
+            return
+
+        if self.uses_gestures is False:
+            self.uses_gestures = True
+
+            active_gestures = []
+
+            for i in range(0, self.gesture_list_widget.count()):
+                active_gestures.append(self.gesture_list_widget.item(i).text())
+
+            for ges in active_gestures:
+                if ges == ac.SHAKE:
+                    self.recognizes_shake = True
+                if ges == ac.WHIP:
+                    self.recognizes_whip = True
+                if ges == ac.WIGGLE:
+                    self.recognizes_wiggle = True
+
+            self.action_btn.setText('No Gesture Mode')
+        else:
+            self.uses_gestures = False
+            self.action_btn.setText('Gesture Mode')
+
+            self.recognizes_shake = False
+            self.recognizes_whip = False
+            self.recognizes_wiggle = False
 
 
 def main():

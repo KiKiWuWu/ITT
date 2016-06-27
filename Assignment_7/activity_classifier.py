@@ -8,6 +8,7 @@ WHIP = 'WHIP'
 SHAKE = 'SHAKE'
 NOTHING = 'NOTHING'
 
+
 class TrainingsDataReader:
     @staticmethod
     def get_trainings_data(file):
@@ -266,6 +267,8 @@ class Classifier:
         elif file_path is None and train_data is not None and \
                 activity is not None:
             self.__train_activity_(train_data, activity)
+
+        return self
 
     def classify(self, gesture_data):
         """
