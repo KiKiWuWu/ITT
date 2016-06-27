@@ -1,11 +1,15 @@
 import csv
 import numpy as np
 from sklearn import svm
-import itertools
+import itertools as it
 
-WIGGLE = "WIGGLE"
-WHIP = 'WHIP'
-SHAKE = 'SHAKE'
+"""
+global identifier variables
+"""
+
+GESTURE_3 = "GESTURE_3"
+GESTURE_2 = 'GESTURE_2'
+GESTURE_1 = 'GESTURE_1'
 NOTHING = 'NOTHING'
 
 
@@ -55,58 +59,58 @@ class Classifier:
             print("Classifier has no trainings data!\nNeeds csv file or array!")
             exit(0)
         else:
-            self.data_shake = None
-            self.data_whip = None
-            self.data_wiggle = None
+            self.data_gesture_1 = None
+            self.data_gesture_2 = None
+            self.data_gesture_3 = None
 
-            self.data_shake_class = []
-            self.data_whip_class = []
-            self.data_wiggle_class = []
+            self.data_gesture_1_class = []
+            self.data_gesture_2_class = []
+            self.data_gesture_3_class = []
 
             self.classifier = svm.SVC()
             self.train(file_path, train_data, activity)
 
-    def __classify_shake_(self, gesture_data):
+    def __classify_gesture_1_(self, gesture_data):
         """
         classifies the shake activity
 
         :param gesture_data: the data which needs to be checked for the
                shaking activity
 
-        :return: a boolean depicting whether shaking occurred or did not occur
+        :return: a boolean depicting whether gesture_1 occurred or did not occur
         """
 
-        shake, whip, wiggle = self.__get_activity_occurrences_(gesture_data)
+        ges1, ges2, ges3 = self.__get_activity_occurrences_(gesture_data)
 
-        return shake > whip and shake > wiggle
+        return ges1 > ges2 and ges1 > ges3
 
-    def __classify_whip_(self, gesture_data):
+    def __classify_gesture_2_(self, gesture_data):
         """
         classifies the whip activity
 
         :param gesture_data: the data which needs to be checked for the
                whipping activity
 
-        :return: a boolean depicting whether whipping occurred or did not occur
+        :return: a boolean depicting whether gesture_2 occurred or did not occur
         """
 
-        shake, whip, wiggle = self.__get_activity_occurrences_(gesture_data)
+        ges1, ges2, ges3 = self.__get_activity_occurrences_(gesture_data)
 
-        return whip > shake and whip > wiggle
+        return ges2 > ges1 and ges2 > ges3
 
-    def __classify_wiggle_(self, gesture_data):
+    def __classify_gesture_3_(self, gesture_data):
         """
         classifies the wiggle activity
 
         :param gesture_data: the data which needs to be checked for the
                wiggling activity
 
-        :return: a boolean depicting whether wiggling occurred or did not occur
+        :return: a boolean depicting whether gesture_3 occurred or did not occur
         """
 
-        shake, whip, wiggle = self.__get_activity_occurrences_(gesture_data)
+        ges1, ges2, ges3 = self.__get_activity_occurrences_(gesture_data)
 
-        return wiggle > shake and wiggle > whip
+        return ges3 > ges1 and ges3 > ges2
 
     def __get_activity_occurrences_(self, gesture_data):
         """
@@ -115,7 +119,8 @@ class Classifier:
 
         :param gesture_data: the data from which the occurrences are extracted
 
-        :return: the occurrences for shaking, whipping and wiggling predictions
+        :return: the occurrences for gesture_1, gesture_2
+                 and gesture_3 predictions
         """
 
         prediction = self.__prediction_(gesture_data)
@@ -123,21 +128,21 @@ class Classifier:
         if prediction is None:
             return 0, 0, 0
 
-        shake_index = 0
-        whip_index = 0
-        wiggle_index = 0
+        ges1 = 0
+        ges2 = 0
+        ges3 = 0
 
         for i in prediction:
             if i == 1:
-                shake_index += 1
+                ges1 += 1
 
             if i == 2:
-                whip_index += 1
+                ges2 += 1
 
             if i == 3:
-                wiggle_index += 1
+                ges3 += 1
 
-        return shake_index, whip_index, wiggle_index
+        return ges1, ges2, ges3
 
     def __prediction_(self, gesture_data):
         """
@@ -176,9 +181,9 @@ class Classifier:
 
         trainings_data = TrainingsDataReader.get_trainings_data(file)
 
-        self.__train_activity_(trainings_data[0], SHAKE, False)
-        self.__train_activity_(trainings_data[1], WHIP, False)
-        self.__train_activity_(trainings_data[2], WIGGLE)
+        self.__train_activity_(trainings_data[0], GESTURE_1, False)
+        self.__train_activity_(trainings_data[1], GESTURE_2, False)
+        self.__train_activity_(trainings_data[2], GESTURE_3)
 
     def __fit_data_to_svm_(self):
         """
@@ -187,27 +192,27 @@ class Classifier:
         :return: void
         """
 
-        self.data_shake_class.clear()
-        self.data_whip_class.clear()
-        self.data_wiggle_class.clear()
+        self.data_gesture_1_class.clear()
+        self.data_gesture_2_class.clear()
+        self.data_gesture_3_class.clear()
 
         data = []
 
-        for item in itertools.chain(self.data_shake, self.data_whip,
-                                    self.data_wiggle):
+        for item in it.chain(self.data_gesture_1, self.data_gesture_2,
+                             self.data_gesture_3):
             data.append([item])
 
-        [self.data_shake_class.append(1)
-         for i in range(0, len(self.data_shake))]
+        [self.data_gesture_1_class.append(1)
+         for i in range(0, len(self.data_gesture_1))]
 
-        [self.data_whip_class.append(2)
-         for i in range(0, len(self.data_whip))]
+        [self.data_gesture_2_class.append(2)
+         for i in range(0, len(self.data_gesture_2))]
 
-        [self.data_wiggle_class.append(3)
-         for i in range(0, len(self.data_wiggle))]
+        [self.data_gesture_3_class.append(3)
+         for i in range(0, len(self.data_gesture_3))]
 
-        data_classes = self.data_shake_class + self.data_whip_class + \
-                       self.data_wiggle_class
+        data_classes = self.data_gesture_1_class + self.data_gesture_2_class + \
+            self.data_gesture_3_class
 
         self.classifier.fit(data, data_classes)
 
@@ -226,9 +231,9 @@ class Classifier:
         trains a given activity
 
         :param data: the new trainings data for the activity
-        :param activity: the name of the activity ("shake", "whip", "wiggle")
+        :param activity: the identifier of the activity
         :param needs_fit: an optional boolean depicting the necessity for data
-               fitting to the support vector machine (needed)
+               fitting to the support vector machine
 
         :return: void
         """
@@ -239,12 +244,12 @@ class Classifier:
             sum_vals.append((data[k][0] + data[k][1] + data[k][2] -
                              3 * 512) / 3)
 
-        if activity == SHAKE:
-            self.data_shake = self.__perform_fft_(sum_vals)
-        elif activity == WHIP:
-            self.data_whip = self.__perform_fft_(sum_vals)
-        elif activity == WIGGLE:
-            self.data_wiggle = self.__perform_fft_(sum_vals)
+        if activity == GESTURE_1:
+            self.data_gesture_1 = self.__perform_fft_(sum_vals)
+        elif activity == GESTURE_2:
+            self.data_gesture_2 = self.__perform_fft_(sum_vals)
+        elif activity == GESTURE_3:
+            self.data_gesture_3 = self.__perform_fft_(sum_vals)
 
         if needs_fit:
             self.__fit_data_to_svm_()
@@ -279,11 +284,11 @@ class Classifier:
         :return: the identifier of the classified activity
         """
 
-        if self.__classify_shake_(gesture_data):
-            return SHAKE
-        elif self.__classify_whip_(gesture_data):
-            return WHIP
-        elif self.__classify_wiggle_(gesture_data):
-            return WIGGLE
+        if self.__classify_gesture_1_(gesture_data):
+            return GESTURE_1
+        elif self.__classify_gesture_2_(gesture_data):
+            return GESTURE_2
+        elif self.__classify_gesture_3_(gesture_data):
+            return GESTURE_3
 
         return NOTHING
