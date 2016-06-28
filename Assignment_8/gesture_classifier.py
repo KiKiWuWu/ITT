@@ -381,10 +381,11 @@ class DollarOneGestureRecognizer:
                         else 1 - b / DollarOneGestureRecognizer.HALF_DIAGONAL)
 
     def add_gesture(self, name, points):
-        pass
+        # might need conversion of parameter points to Point type points
+        self.gestures.append(Unistroke(name, points))
 
     def delete_gesture(self, index):
-        pass
+        self.gestures.pop(index)
 
 
 
