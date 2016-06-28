@@ -37,9 +37,6 @@ class DrawWidget(QtWidgets.QWidget):
             self.points = []
             self.data = []
             self.update()
-        # elif ev.button() == QtCore.Qt.RightButton:
-            # self.points = custom_filter(self.points)
-            # self.update()
 
     def mouseReleaseEvent(self, ev):
         if ev.button() == QtCore.Qt.LeftButton:

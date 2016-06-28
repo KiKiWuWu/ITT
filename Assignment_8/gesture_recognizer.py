@@ -7,42 +7,13 @@ import sys
 import sh
 import  webbrowser as wb
 import numpy as np
-import wiimote
 import time
 import gesture_classifier as gc
 
 UI_FILE = 'gesture_recognizer.ui'
 HELP_TEXT = 'HELP TEXT'
 
-
-class WiimoteThread(QtCore.QThread):
-    """
-    simple thread class for concurrent wiimote accelerometer data retrieval
-    """
-
-    update_trigger = QtCore.pyqtSignal()
-
-    def __init__(self):
-        """
-        constructor
-
-        :return: void
-        """
-
-        super(WiimoteThread, self).__init__()
-        self.is_looping = True
-
-    def run(self):
-        """
-        looped action of the thread
-
-        :return: void
-        """
-
-        while self.is_looping:
-            time.sleep(0.02)  # sampling rate of 50 Hz
-            self.update_trigger.emit()
-
+# points to classifier need to of Point class type
 
 class Window(Qt.QMainWindow):
     """
@@ -60,35 +31,51 @@ class Window(Qt.QMainWindow):
         super(Window, self).__init__()
         self.win = uic.loadUi(UI_FILE)
 
+        self.classifier = gc.DollarOneGestureRecognizer()
+
         self.gesture_data = []
         self.wm = None
 
-        self.connect_btn = self.win.btn_connect
-        self.about_btn = self.win.btn_about
-        self.address_le = self.win.le_address
+        self.gesture_list_widget = self.win.listWidget
 
-        self.connect_btn.clicked.connect(self.connect_wiimote)
+        self.add_btn = self.win.btn_add
+        self.about_btn = self.win.btn_about
+
+        self.add_btn.clicked.connect(self.add)
         self.about_btn.clicked.connect(self.show_readme)
 
-        self.wiimote_thread = WiimoteThread()
-        self.wiimote_thread.update_trigger.connect(self.get_wiimote_input)
-        self.wiimote_thread.start()
-
+        self.setup_gesture_list_widget()
 
         self.win.show()
 
+        self.gesture_list_widget.setContextMenuPolicy(
+            QtCore.Qt.ActionsContextMenu)
 
-    def connect_wiimote(self):
-        """
-        connects to a wiimote if one is found else does nothing
+    def setup_gesture_list_widget(self):
+        self.gesture_list_widget.setContextMenuPolicy(
+            QtCore.Qt.ActionsContextMenu)
 
-        :return: void
-        """
+        self.retrain_action = Qt.QAction("Retrain Gesture", None)
+        self.retrain_action.triggered.connect(self.retrain)
+        self.remove_action = Qt.QAction("Remove Gesture", None)
+        self.remove_action.triggered.connect(self.remove)
 
-        try:
-            self.wm = wiimote.connect(self.address_le.text())
-        except Exception:
-            pass
+        self.gesture_list_widget.addAction(self.retrain_action)
+        self.gesture_list_widget.addAction(self.remove_action)
+
+    def add(self):
+        gesture_name, ok = Qt.QInputDialog.getText(self.win, 'Input Dialog',
+                                    'Enter Gesture Name')
+
+        self.gesture_list_widget.addItem(Qt.QListWidgetItem(gesture_name))
+
+        # train the thing here
+
+    def retrain(self):
+        print('retrain')
+
+    def remove(self):
+        print('remove')
 
     def show_readme(self):
         """
