@@ -273,7 +273,7 @@ class DollarOneGestureRecognizer:
         """
         self.gestures = []
 
-    def recognize(self, points, use_protractor=False):
+    def recognize(self, points):
         pts = Functions.resample(points, Unistroke.NUM_POINTS)
 
         radians = Functions.indicative_angle(pts)
@@ -307,4 +307,5 @@ class DollarOneGestureRecognizer:
         self.gestures.append(Unistroke(name, points))
 
     def delete_gesture(self, index):
-        self.gestures.pop(index)
+        if index < len(self.gestures):
+            self.gestures.pop(index)

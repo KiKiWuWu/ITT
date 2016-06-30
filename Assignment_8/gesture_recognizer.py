@@ -17,6 +17,8 @@ HELP_TEXT = 'HELP TEXT'
 
 
 class DrawWidget(QtWidgets.QWidget):
+    recognize_trigger = Qt.pyqtSignal()
+
     def __init__(self, parent, x, y, width=420, height=400):
         super().__init__(parent)
         self.setGeometry(x, y, width, height)
@@ -24,7 +26,7 @@ class DrawWidget(QtWidgets.QWidget):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.drawing = False
         self.points = []
-        self.times = []
+        self.points_for_classifier = []
 
         self.classifier = gc.DollarOneGestureRecognizer()
 
@@ -38,6 +40,7 @@ class DrawWidget(QtWidgets.QWidget):
         if ev.button() == QtCore.Qt.LeftButton:
             self.drawing = True
             self.points = []
+            self.points_for_classifier = []
             self.update()
 
     def mouseReleaseEvent(self, ev):
@@ -45,16 +48,11 @@ class DrawWidget(QtWidgets.QWidget):
             self.drawing = False
 
             if not len(self.points) == 0:
-                pts = []
-
                 for p in self.points:
                     x, y = p
-                    pts.append(gc.Point(x, y))
+                    self.points_for_classifier.append(gc.Point(x, y))
 
-                result = self.classifier.recognize(pts, False)
-
-                print(result.name)
-                print(result.score)
+                self.recognize_trigger.emit()
 
             self.update()
 
@@ -99,9 +97,9 @@ class Window(Qt.QMainWindow):
         self.win = uic.loadUi(UI_FILE)
         self.draw_widget = DrawWidget(self.win, 240, 30)
 
+        self.draw_widget.recognize_trigger.connect(self.perform_recognition)
 
         self.gesture_data = []
-        self.wm = None
 
         self.gesture_list_widget = self.win.listWidget
 
@@ -112,6 +110,10 @@ class Window(Qt.QMainWindow):
         self.about_btn.clicked.connect(self.show_readme)
 
         self.setup_gesture_list_widget()
+
+        self.is_training = False
+
+        self.gesture_action_relation = {}
 
         self.win.show()
 
@@ -134,15 +136,25 @@ class Window(Qt.QMainWindow):
         gesture_name, ok = Qt.QInputDialog.getText(self.win, 'Input Dialog',
                                     'Enter Gesture Name')
 
+        actions = ['Macarena', 'GOT_Quote', 'Shutdown']
+
+        action, ok = Qt.QInputDialog.getItem(self.win, 'Choose',
+                                             'this', actions)
+
+        self.gesture_action_relation[gesture_name] = action
+
         self.gesture_list_widget.addItem(Qt.QListWidgetItem(gesture_name))
 
-        # train the thing here
-
     def retrain(self):
-        print('retrain')
+        self.is_training = True
 
     def remove(self):
-        print('remove')
+        index = self.gesture_list_widget.currentRow()
+
+        self.gesture_list_widget.takeItem(index)
+        self.draw_widget.classifier.delete_gesture(index)
+
+
 
     def show_readme(self):
         """
@@ -159,6 +171,37 @@ class Window(Qt.QMainWindow):
         msg.setWindowTitle('About')
         msg.setStandardButtons(Qt.QMessageBox.Ok)
         msg.exec_()
+
+    def perform_recognition(self):
+        points = self.draw_widget.points_for_classifier
+
+        if self.is_training:
+            self.is_training = False
+
+            name = self.gesture_list_widget.currentItem().text()
+            points = self.draw_widget.points_for_classifier
+
+            self.draw_widget.classifier.add_gesture(name, points)
+        else:
+            result = self.draw_widget.classifier.recognize(points)
+
+            self.perform_action(result.name)
+
+            print(result.name)
+            print(result.score)
+
+    def perform_action(self, gesture):
+        if gesture not in self.gesture_action_relation:
+            return
+
+        if 'Macarena' == self.gesture_action_relation[gesture]:
+            wb.open('https://www.youtube.com/watch?v=XiBYM6g8Tck')
+        elif 'GOT_Quote' == self.gesture_action_relation[gesture]:
+            run_external_application = sh.Command("./dummy.py")
+            print(run_external_application(_bg=False))
+        elif 'Shutdown':
+            print('Shutdown requested')
+            sys.exit(0)
 
 
 def main():
