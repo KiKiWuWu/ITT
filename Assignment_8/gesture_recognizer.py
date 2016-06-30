@@ -2,7 +2,7 @@
 # coding: utf-8
 # -*- coding: utf-8 -*-
 
-from PyQt5 import uic, QtGui, QtCore, Qt
+from PyQt5 import uic, QtGui, QtCore, Qt, QtWidgets
 import sys
 import sh
 import  webbrowser as wb
@@ -14,6 +14,73 @@ UI_FILE = 'gesture_recognizer.ui'
 HELP_TEXT = 'HELP TEXT'
 
 # points to classifier need to of Point class type
+
+
+class DrawWidget(QtWidgets.QWidget):
+    def __init__(self, parent, x, y, width=420, height=400):
+        super().__init__(parent)
+        self.setGeometry(x, y, width, height)
+        self.resize(width, height)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.drawing = False
+        self.points = []
+        self.times = []
+
+        self.classifier = gc.DollarOneGestureRecognizer()
+
+        self.setMouseTracking(True)  # only get events when button is pressed
+        self.init_ui()
+
+    def init_ui(self):
+        self.show()
+
+    def mousePressEvent(self, ev):
+        if ev.button() == QtCore.Qt.LeftButton:
+            self.drawing = True
+            self.points = []
+            self.update()
+
+    def mouseReleaseEvent(self, ev):
+        if ev.button() == QtCore.Qt.LeftButton:
+            self.drawing = False
+
+            if not len(self.points) == 0:
+                pts = []
+
+                for p in self.points:
+                    x, y = p
+                    pts.append(gc.Point(x, y))
+
+                result = self.classifier.recognize(pts, False)
+
+                print(result.name)
+                print(result.score)
+
+            self.update()
+
+    def mouseMoveEvent(self, ev):
+        if self.drawing:
+
+            x = ev.x()
+            y = ev.y()
+
+            self.points.append((x, y))
+            self.update()
+
+    def poly(self, pts):
+        return QtGui.QPolygonF(map(lambda p: QtCore.QPointF(*p), pts))
+
+    def paintEvent(self, ev):
+        qp = QtGui.QPainter()
+        qp.begin(self)
+        qp.setBrush(QtGui.QColor(0, 0, 0))
+        qp.drawRect(ev.rect())
+        qp.setBrush(QtGui.QColor(20, 255, 190))
+        qp.setPen(QtGui.QColor(0, 155, 0))
+        qp.drawPolyline(self.poly(self.points))
+        for point in self.points:
+            qp.drawEllipse(point[0]-1, point[1] - 1, 2, 2)
+
 
 class Window(Qt.QMainWindow):
     """
@@ -30,8 +97,8 @@ class Window(Qt.QMainWindow):
 
         super(Window, self).__init__()
         self.win = uic.loadUi(UI_FILE)
+        self.draw_widget = DrawWidget(self.win, 240, 30)
 
-        self.classifier = gc.DollarOneGestureRecognizer()
 
         self.gesture_data = []
         self.wm = None
@@ -92,17 +159,6 @@ class Window(Qt.QMainWindow):
         msg.setWindowTitle('About')
         msg.setStandardButtons(Qt.QMessageBox.Ok)
         msg.exec_()
-
-    def get_wiimote_input(self):
-        """
-
-
-        :return: void
-        """
-
-        if self.wm is not None:
-            if self.wm.buttons["A"]:
-                print(self.wm.accelerometer)
 
 
 def main():
