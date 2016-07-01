@@ -75,8 +75,8 @@ class Rectangle:
         
         :param x1: x coordinate of the first corner point
         :param y1: y coordinate of the first corner point
-        :param x2: x coordinate of the second corner point
-        :param y2: y coordinate of the second corner point
+        :param x2: width of the rectangle
+        :param y2: height of the rectangle
         
         :return: void
         """
@@ -107,7 +107,9 @@ class Unistroke:
         
         self.name = name
         self.points = Functions.resample(points, Unistroke.NUM_POINTS)
+
         radians = Functions.indicative_angle(self.points)
+
         self.points = Functions.rotate_by(self.points, -radians)
         self.points = Functions.scale_to(self.points, Unistroke.SQUARE_SIZE)
         self.points = Functions.translate_to(self.points, Unistroke.ORIGIN)
@@ -134,7 +136,7 @@ class Result:
 
 class Functions:
     """
-    this class defines all the @staticmethods
+    this class statically defines all the helper functions
     
     this class has following methods:
         resample()
@@ -153,7 +155,7 @@ class Functions:
     
     """
     
-    PHI = 0.5 * (-1 + np.sqrt(5))
+    PHI = 0.5 * (-1.0 + np.sqrt(5))
 
     @staticmethod
     def resample(points, n):
@@ -161,26 +163,29 @@ class Functions:
         this methode resamples the points with new points
         
         :param points: point array
-        :param n: number of points from the Unistroke object; Unistroke.NUM_POINTS
+        :param n: fixed number of points from the Unistroke object;
+                  Unistroke.NUM_POINTS
         
         :return: new_points array
         """
         
         interval_length = Functions.path_length(points) / (n - 1)
-        D = 0.0
+        distance = 0.0
 
         new_points = [points[0]]
 
         i = 1
 
         while i < len(points) - 1:
-            d = Functions.distance(points[i - 1], points[i])
+            temp_distance = Functions.distance(points[i - 1], points[i])
 
-            if (D + d) >= interval_length:
-                qx = points[i - 1].x + ((interval_length - D) / d) * \
+            if (distance + temp_distance) >= interval_length:
+                qx = points[i - 1].x + ((interval_length - distance) /
+                                        temp_distance) * \
                                        (points[i].x - points[i - 1].x)
 
-                qy = points[i - 1].y + ((interval_length - D) / d) * \
+                qy = points[i - 1].y + ((interval_length - distance) /
+                                        temp_distance) * \
                                        (points[i].y - points[i - 1].y)
 
                 q = Point(qx, qy)
@@ -189,9 +194,9 @@ class Functions:
 
                 points.insert(i, q)
 
-                D = 0.0
+                distance = 0.0
             else:
-                D += d
+                distance += temp_distance
 
             i += 1
 
@@ -207,7 +212,7 @@ class Functions:
         
         :param points: array of points
         
-        :return: an array of angles of randians
+        :return: an angle in randians
         """
         
         centroid = Functions.centroid(points)
@@ -216,12 +221,12 @@ class Functions:
     @staticmethod
     def rotate_by(points, angle_in_radians):
         """
-        method to rotate the points by an angle of radians
+        method to rotate the points by an angle in radians
         
         :param points: point array
-        :param angle_of_radians: array of angles of radians
+        :param angle_in_radians: rotation angle in radians
         
-        :return: new_points array
+        :return: the array containing the points after the rotation
         """
         
         centroid = Functions.centroid(points)
@@ -234,7 +239,7 @@ class Functions:
                  centroid.x
 
             qy = (p.x - centroid.x) * sine + (p.y - centroid.y) * cosine + \
-                 centroid.y
+                centroid.y
 
             new_points.append(Point(qx, qy))
 
@@ -245,8 +250,8 @@ class Functions:
         """
         method that scales the points of a shape
         
-        :param points:
-        :param size:
+        :param points: the array of points
+        :param size: the target size to scale to
         
         :return: new_points array
         """
@@ -264,6 +269,14 @@ class Functions:
 
     @staticmethod
     def translate_to(points, pt):
+        """
+
+        :param points: the points to be translated
+        :param pt: the point to which translate to
+
+        :return: the list of points after they have been translated
+        """
+
         centroid = Functions.centroid(points)
 
         new_points = []
@@ -277,7 +290,8 @@ class Functions:
         return new_points
 
     @staticmethod
-    def distance_at_best_angle(points, gesture, neg_angle_range, pos_angle_range, angle_precision):
+    def distance_at_best_angle(points, gesture, neg_angle_range,
+                               pos_angle_range, angle_precision):
         """
         this method calculates the distance at the best angle
         
@@ -290,9 +304,13 @@ class Functions:
         :return: returns the scalar of two distances
         """
         
-        x1 = Functions.PHI * neg_angle_range + (1.0 - Functions.PHI) * pos_angle_range
+        x1 = Functions.PHI * neg_angle_range + \
+            (1.0 - Functions.PHI) * pos_angle_range
+
         distance1 = Functions.distance_at_angle(points, gesture, x1)
-        x2 = (1.0 - Functions.PHI) * neg_angle_range + Functions.PHI * pos_angle_range
+        x2 = (1.0 - Functions.PHI) * neg_angle_range + \
+            Functions.PHI * pos_angle_range
+
         distance2 = Functions.distance_at_angle(points, gesture, x2)
 
         while np.abs(pos_angle_range - neg_angle_range) > angle_precision:
@@ -300,13 +318,17 @@ class Functions:
                 pos_angle_range = x2
                 x2 = x1
                 distance2 = distance1
-                x1 = Functions.PHI * neg_angle_range + (1.0 - Functions.PHI) * pos_angle_range
+                x1 = Functions.PHI * neg_angle_range + \
+                    (1.0 - Functions.PHI) * pos_angle_range
+
                 distance1 = Functions.distance_at_angle(points, gesture, x1)
             else:
                 neg_angle_range = x1
                 x1 = x2
                 distance1 = distance2
-                x2 = (1.0 - Functions.PHI) * neg_angle_range + Functions.PHI * pos_angle_range
+                x2 = (1.0 - Functions.PHI) * neg_angle_range + \
+                    Functions.PHI * pos_angle_range
+
                 distance2 = Functions.distance_at_angle(points, gesture, x2)
 
         return np.minimum(distance1, distance2)
@@ -314,13 +336,14 @@ class Functions:
     @staticmethod
     def distance_at_angle(points, unistroke, angle_in_radians):
         """
-        this method returns the path distance of the points array to the unistroke points
+        this method returns the path distance of the points array to the
+        unistroke points
         
-        :param points: point array
-        :param unistroke: unistroke
-        :param angle_in radians: the angle in radians
+        :param points: the point array
+        :param unistroke: the target unistroke
+        :param angle_in_radians: the angle in radians
         
-        :return: path distance 
+        :return: the path distance
         """
         new_points = Functions.rotate_by(points, angle_in_radians)
 
@@ -329,9 +352,9 @@ class Functions:
     @staticmethod
     def centroid(points):
         """
-        this method calculates the centroid of a point array
+        calculates the centroid of a point array
         
-        :param points: array of points
+        :param points: array of points from which the centroid is calculated
         
         :return: the centroid
         """
@@ -351,11 +374,11 @@ class Functions:
     @staticmethod
     def bounding_box(points):
         """
-        this method gives the bounding box around an array of points back
+        this method computes the bounding box of an array of points
         
-        :param points: array of points
+        :param points: array of points to receive its bounding box
         
-        :return: a bounding box
+        :return: the bounding box of the given points
         """
         
         min_x = float('+Infinity')
@@ -398,6 +421,7 @@ class Functions:
         
         :return: returns the sum of distances of the points list
         """
+
         d = 0.0
 
         for i in range(1, len(points)):
@@ -415,6 +439,7 @@ class Functions:
         
         :return: the distance of p1 and p2
         """
+
         dx = p2.x - p1.x
         dy = p2.y - p1.y
 
@@ -425,10 +450,11 @@ class Functions:
         """
         this method converts an angle from degrees to radians
         
-        :param angle_in_degrees:
+        :param angle_in_degrees: the angle in degrees
         
-        :return: radians
+        :return: the angle in radians
         """
+
         return angle_in_degrees * np.pi / 180
 
 
@@ -442,6 +468,7 @@ class DollarOneGestureRecognizer:
         delete_gesture()
     
     """
+
     ANGLE_RANGE = Functions.degrees_to_radians(45)
     ANGLE_PRECISION = Functions.degrees_to_radians(2)
     DIAGONAL = np.sqrt(Unistroke.SQUARE_SIZE * Unistroke.SQUARE_SIZE +
@@ -451,18 +478,20 @@ class DollarOneGestureRecognizer:
     def __init__(self):
         """
         constructor
+
         :return: void
         """
         self.gestures = []
 
     def recognize(self, points):
         """
-        this methode recognizes a point array as a gesture or not
+        this methode recognizes a point array as a gesture
         
-        :param points: the point array
+        :param points: the point array to find the gesture in
         
-        :return: result of the gesture recognizion
+        :return: result of the dollar one gesture recognizer
         """
+
         pts = Functions.resample(points, Unistroke.NUM_POINTS)
 
         radians = Functions.indicative_angle(pts)
@@ -493,23 +522,24 @@ class DollarOneGestureRecognizer:
 
     def add_gesture(self, name, points):
         """
-        this method adds a uni-stroke gesture to the self.gesture array
+        this method adds a unistroke gesture to the list of known gestures
         
         :param name: name of the new gesture
         :param points: array of all including points
         
         :return: void
         """
-        # might need conversion of parameter points to Point type points
+
         self.gestures.append(Unistroke(name, points))
 
     def delete_gesture(self, index):
         """
-        this method removes a specific gesture from the self.gesture array
+        this method removes a specific gesture from the list of gestures
         
         :param index: (int) is the position in a list 
                 
         :return: void
         """
+
         if index < len(self.gestures):
             self.gestures.pop(index)

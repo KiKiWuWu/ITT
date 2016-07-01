@@ -5,9 +5,7 @@
 from PyQt5 import uic, QtGui, QtCore, Qt, QtWidgets
 import sys
 import sh
-import  webbrowser as wb
-import numpy as np
-import time
+import webbrowser as wb
 import gesture_classifier as gc
 
 UI_FILE = 'gesture_recognizer.ui'
@@ -159,6 +157,7 @@ class Window(Qt.QMainWindow):
         self.draw_widget.recognize_trigger.connect(self.perform_recognition)
 
         self.gesture_data = []
+        self.gesture_actions = ['Macarena', 'GOT_Quote', 'Shutdown']
 
         self.gesture_list_widget = self.win.listWidget
 
@@ -205,13 +204,12 @@ class Window(Qt.QMainWindow):
         :return:
         """
 
-        gesture_name, ok = Qt.QInputDialog.getText(self.win, 'Input Dialog',
-                                    'Enter Gesture Name')
+        gesture_name, ok = Qt.QInputDialog.getText(self.win, 'Add Gesture',
+                                                   'Enter Gesture Name')
 
-        actions = ['Macarena', 'GOT_Quote', 'Shutdown']
-
-        action, ok = Qt.QInputDialog.getItem(self.win, 'Choose',
-                                             'this', actions)
+        action, ok = Qt.QInputDialog.getItem(self.win, 'Action Chooser',
+                                             'Choose an action',
+                                             self.gesture_actions)
 
         self.gesture_action_relation[gesture_name] = action
 
@@ -267,9 +265,9 @@ class Window(Qt.QMainWindow):
     def perform_recognition(self):
         """
         trains the classifier if the training flags is set or classifies the
-        set of drawn points
+        set of drawn points and performs their assigned action
 
-        :return:
+        :return: void
         """
 
         points = self.draw_widget.points_for_classifier
@@ -289,18 +287,29 @@ class Window(Qt.QMainWindow):
             self.perform_action(result.name)
 
     def perform_action(self, gesture):
+        """
+        performs an action based on the given gesture
+
+        :param gesture: the gesture which assigned action has to be performed
+
+        :return: void
+        """
+
         if gesture not in self.gesture_action_relation:
             return
 
-        if 'Macarena' == self.gesture_action_relation[gesture]:
+        if self.gesture_actions[0] == self.gesture_action_relation[gesture]:
             wb.open('https://www.youtube.com/watch?v=XiBYM6g8Tck')
             self.notification_l.setText('Playing Macarena in Browser (' +
                                         gesture + ')')
-        elif 'GOT_Quote' == self.gesture_action_relation[gesture]:
+
+        elif self.gesture_actions[1] == self.gesture_action_relation[gesture]:
             run_external_application = sh.Command("./dummy.py")
-            self.notification_l.setText('Ran dummy.py (' + gesture + ')')
+            self.notification_l.setText('Ran dummy.py (' + gesture + ') Look '
+                                        'in the terminal')
+
             print(run_external_application(_bg=False))
-        elif 'Shutdown':
+        elif self.gesture_actions[2] == self.gesture_action_relation[gesture]:
             self.notification_l.setText('BYE BYE (' + gesture + ')')
             print('Shutdown requested! BYE BYE')
             sys.exit(0)
