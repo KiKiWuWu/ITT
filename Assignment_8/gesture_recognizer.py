@@ -203,13 +203,16 @@ class Window(Qt.QMainWindow):
 
         self.add_btn = self.win.btn_add
         self.about_btn = self.win.btn_about
+        self.action_btn = self.win.btn_action
 
         self.add_btn.clicked.connect(self.add)
         self.about_btn.clicked.connect(self.show_readme)
+        self.action_btn.clicked.connect(self.trigger_action_mode)
 
         self.setup_gesture_list_widget()
 
         self.is_training = False
+        self.is_action_mode = False
         self.notification_l = self.win.label_notification
 
         self.gesture_action_relation = {}
@@ -217,6 +220,9 @@ class Window(Qt.QMainWindow):
         self.add_default_gesture('triangle', 0)
         self.add_default_gesture('circle', 1)
         self.add_default_gesture('caret', 2)
+
+        self.notification_l.setText('Gesture recognition deactivated! '
+                                    'Press Action for activation!')
 
         self.win.show()
 
@@ -329,20 +335,37 @@ class Window(Qt.QMainWindow):
         :return: void
         """
 
-        points = self.draw_widget.points_for_classifier
-
-        if self.is_training:
-            self.is_training = False
-
-            name = self.gesture_list_widget.currentItem().text()
+        if self.is_action_mode:
             points = self.draw_widget.points_for_classifier
 
-            self.draw_widget.classifier.add_gesture(name, points)
-            self.notification_l.setText('Training done! You can use the '
-                                        'gesture now!')
+            if self.is_training:
+                self.is_training = False
+
+                name = self.gesture_list_widget.currentItem().text()
+                points = self.draw_widget.points_for_classifier
+
+                self.draw_widget.classifier.add_gesture(name, points)
+                self.notification_l.setText('Training done! You can use the '
+                                            'gesture now!')
+            else:
+                result = self.draw_widget.classifier.recognize(points)
+                self.perform_action(result.name)
+
+    def trigger_action_mode(self):
+        """
+        handles activation and deactivation of the gesture recognition
+
+        :return: void
+        """
+
+        if not self.is_action_mode:
+            self.is_action_mode = True
+            self.action_btn.setText('Stop')
+            self.notification_l.setText('Gesture recognition activated!')
         else:
-            result = self.draw_widget.classifier.recognize(points)
-            self.perform_action(result.name)
+            self.is_action_mode = False
+            self.action_btn.setText('Action')
+            self.notification_l.setText('Gesture recognition deactivated!')
 
     def perform_action(self, gesture):
         """

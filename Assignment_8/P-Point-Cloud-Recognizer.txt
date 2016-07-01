@@ -1,0 +1,27 @@
+What does the recognizer do?
+
+Unlike the $1 recognizer the $P recognizer is an algorithm for multi-stroke gesture recognition. 
+But unlike its predecessors, the $P looks at the represented shape as a cloud of orderless points.
+Which gives the advantage of disregarding any time-dependent factors, the stroke order or the direction of the drawn shape. First, point clouds are resampled so they consist of the same number of samples. After that the euclidian distances of these points are computed and the sum of them is determined. The smallest of these sums is the $P recognizer's final classification result.
+
+_________
+Name an advantage of the $P recognizer over the $1 recognizer.
+
+The $1 performs only unistroke gesture recognition, however the $P can handle multi-stroke shapes and recognize them with an accuracy of >99% by collecting only 10 data samples for each gesture. And as another advantageous example, the direction of drawing the gesture is not important anymore which provides a user-independent gesture recognition.
+
+
+_________
+What is the minimum matching distance?
+
+The minimum matching distance is calculated by matching all points of the data set C (the first cloud of points) to their closest point of the data set T. 
+In $P the minimum matching distance is computed via the Modified Hausendorff which is an altered version of Hausendorff to increase its robustness to outlier points.
+
+
+
+
+ 
+
+
+
+
+
