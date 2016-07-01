@@ -7,9 +7,31 @@ import sys
 import sh
 import webbrowser as wb
 import gesture_classifier as gc
+import csv
 
 UI_FILE = 'gesture_recognizer.ui'
 HELP_TEXT = 'HELP TEXT'
+
+
+class TrainingsDataReader:
+    @staticmethod
+    def get_trainings_data(file):
+        values = []
+
+        with open(file, "r", newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=';')
+
+            i = 0
+            for row in reader:
+                if i == 0:
+                    i = 1
+                    continue
+
+                x, y = row
+
+                values.append(gc.Point(int(x), int(y)))
+
+        return values
 
 
 class DrawWidget(QtWidgets.QWidget):
@@ -174,10 +196,20 @@ class Window(Qt.QMainWindow):
 
         self.gesture_action_relation = {}
 
+        self.add_default_gesture('triangle', 0)
+        self.add_default_gesture('circle', 1)
+        self.add_default_gesture('caret', 2)
+
         self.win.show()
 
         self.gesture_list_widget.setContextMenuPolicy(
             QtCore.Qt.ActionsContextMenu)
+
+    def add_default_gesture(self, name, action_index):
+        pts = TrainingsDataReader.get_trainings_data(name + '.csv')
+        self.draw_widget.classifier.add_gesture(name, pts)
+        self.gesture_list_widget.addItem(name)
+        self.gesture_action_relation[name] = self.gesture_actions[action_index]
 
     def setup_gesture_list_widget(self):
         """
@@ -283,7 +315,6 @@ class Window(Qt.QMainWindow):
                                         'gesture now!')
         else:
             result = self.draw_widget.classifier.recognize(points)
-
             self.perform_action(result.name)
 
     def perform_action(self, gesture):

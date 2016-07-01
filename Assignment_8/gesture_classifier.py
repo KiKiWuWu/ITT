@@ -466,7 +466,6 @@ class DollarOneGestureRecognizer:
         recognize()
         add_gesture()
         delete_gesture()
-    
     """
 
     ANGLE_RANGE = Functions.degrees_to_radians(45)
@@ -517,7 +516,7 @@ class DollarOneGestureRecognizer:
         if u == -1:
             return Result('No Match', 0.0)
         else:
-            return Result(self.gestures[u].name, float(1) - b /
+            return Result(self.gestures[u].name, 1.0 - b /
                           DollarOneGestureRecognizer.HALF_DIAGONAL)
 
     def add_gesture(self, name, points):
