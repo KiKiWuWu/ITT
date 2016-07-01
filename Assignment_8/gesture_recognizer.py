@@ -13,13 +13,23 @@ import gesture_classifier as gc
 UI_FILE = 'gesture_recognizer.ui'
 HELP_TEXT = 'HELP TEXT'
 
-# points to classifier need to of Point class type
-
 
 class DrawWidget(QtWidgets.QWidget):
     recognize_trigger = Qt.pyqtSignal()
 
     def __init__(self, parent, x, y, width=420, height=400):
+        """
+        constructor
+
+        :param parent: the widget's parent
+        :param x: the widget's x coordinate
+        :param y: the widget's y coordinate
+        :param width: the widget's width
+        :param height: the widget's height
+
+        :return: void
+        """
+
         super().__init__(parent)
         self.setGeometry(x, y, width, height)
         self.resize(width, height)
@@ -30,13 +40,20 @@ class DrawWidget(QtWidgets.QWidget):
 
         self.classifier = gc.DollarOneGestureRecognizer()
 
-        self.setMouseTracking(True)  # only get events when button is pressed
-        self.init_ui()
-
-    def init_ui(self):
+        self.setMouseTracking(True)
         self.show()
 
     def mousePressEvent(self, ev):
+        """
+        overridden
+
+        callback for mouse press
+        activates the drawing and clears the needed datastructures
+
+        :param ev: the fired event
+        :return: void
+        """
+
         if ev.button() == QtCore.Qt.LeftButton:
             self.drawing = True
             self.points = []
@@ -44,6 +61,18 @@ class DrawWidget(QtWidgets.QWidget):
             self.update()
 
     def mouseReleaseEvent(self, ev):
+        """
+        overridden
+
+        callback fpr mouse release
+        saves all gathered points and emits a signal for the processing
+        callback function
+
+        :param ev: the fired event
+
+        :return: void
+        """
+
         if ev.button() == QtCore.Qt.LeftButton:
             self.drawing = False
 
@@ -57,6 +86,17 @@ class DrawWidget(QtWidgets.QWidget):
             self.update()
 
     def mouseMoveEvent(self, ev):
+        """
+        overridden
+
+        callback for mouse move
+        saves the points retrieved from the event to a datastructure
+
+        :param ev: the fired event
+
+        :return: void
+        """
+
         if self.drawing:
 
             x = ev.x()
@@ -66,9 +106,28 @@ class DrawWidget(QtWidgets.QWidget):
             self.update()
 
     def poly(self, pts):
+        """
+        creates a polygon based on the given points
+
+        :param pts: the points of the polygon
+
+        :return: a polygon object
+        """
+
         return QtGui.QPolygonF(map(lambda p: QtCore.QPointF(*p), pts))
 
     def paintEvent(self, ev):
+        """
+        overridden
+
+        callback for paint event
+        draws a polygon to the widgetss
+
+        :param ev: the fired event
+
+        :return: void
+        """
+
         qp = QtGui.QPainter()
         qp.begin(self)
         qp.setBrush(QtGui.QColor(0, 0, 0))
@@ -77,7 +136,7 @@ class DrawWidget(QtWidgets.QWidget):
         qp.setPen(QtGui.QColor(0, 155, 0))
         qp.drawPolyline(self.poly(self.points))
         for point in self.points:
-            qp.drawEllipse(point[0]-1, point[1] - 1, 2, 2)
+            qp.drawEllipse(point[0] - 1, point[1] - 1, 2, 2)
 
 
 class Window(Qt.QMainWindow):
@@ -112,6 +171,7 @@ class Window(Qt.QMainWindow):
         self.setup_gesture_list_widget()
 
         self.is_training = False
+        self.notification_l = self.win.label_notification
 
         self.gesture_action_relation = {}
 
@@ -121,6 +181,11 @@ class Window(Qt.QMainWindow):
             QtCore.Qt.ActionsContextMenu)
 
     def setup_gesture_list_widget(self):
+        """
+        adds right click context menu actions to the list widget items
+
+        :return: void
+        """
         self.gesture_list_widget.setContextMenuPolicy(
             QtCore.Qt.ActionsContextMenu)
 
@@ -133,6 +198,13 @@ class Window(Qt.QMainWindow):
         self.gesture_list_widget.addAction(self.remove_action)
 
     def add(self):
+        """
+        adds a gesture to the list widget and saves its corresponding action
+        in a dictionary
+
+        :return:
+        """
+
         gesture_name, ok = Qt.QInputDialog.getText(self.win, 'Input Dialog',
                                     'Enter Gesture Name')
 
@@ -145,16 +217,36 @@ class Window(Qt.QMainWindow):
 
         self.gesture_list_widget.addItem(Qt.QListWidgetItem(gesture_name))
 
+        self.notification_l.setText('Added Gesture: ' + gesture_name +
+                                    ' with Action: ' + action + '. Retrain!')
+
     def retrain(self):
+        """
+        sets the the trainings flag to true
+
+        :return: void
+        """
+
+        name = self.gesture_list_widget.currentItem().text()
+
         self.is_training = True
+        self.notification_l.setText('Retraining (' + name + ')')
 
     def remove(self):
+        """
+        removes a item from the list widget and delete from the trained
+        gestures
+
+        :return: void
+
+        """
         index = self.gesture_list_widget.currentRow()
+        name = self.gesture_list_widget.currentItem().text()
 
         self.gesture_list_widget.takeItem(index)
         self.draw_widget.classifier.delete_gesture(index)
 
-
+        self.notification_l.setText('Deleted Gesture: ' + name)
 
     def show_readme(self):
         """
@@ -173,6 +265,13 @@ class Window(Qt.QMainWindow):
         msg.exec_()
 
     def perform_recognition(self):
+        """
+        trains the classifier if the training flags is set or classifies the
+        set of drawn points
+
+        :return:
+        """
+
         points = self.draw_widget.points_for_classifier
 
         if self.is_training:
@@ -182,13 +281,12 @@ class Window(Qt.QMainWindow):
             points = self.draw_widget.points_for_classifier
 
             self.draw_widget.classifier.add_gesture(name, points)
+            self.notification_l.setText('Training done! You can use the '
+                                        'gesture now!')
         else:
             result = self.draw_widget.classifier.recognize(points)
 
             self.perform_action(result.name)
-
-            print(result.name)
-            print(result.score)
 
     def perform_action(self, gesture):
         if gesture not in self.gesture_action_relation:
@@ -196,11 +294,15 @@ class Window(Qt.QMainWindow):
 
         if 'Macarena' == self.gesture_action_relation[gesture]:
             wb.open('https://www.youtube.com/watch?v=XiBYM6g8Tck')
+            self.notification_l.setText('Playing Macarena in Browser (' +
+                                        gesture + ')')
         elif 'GOT_Quote' == self.gesture_action_relation[gesture]:
             run_external_application = sh.Command("./dummy.py")
+            self.notification_l.setText('Ran dummy.py (' + gesture + ')')
             print(run_external_application(_bg=False))
         elif 'Shutdown':
-            print('Shutdown requested')
+            self.notification_l.setText('BYE BYE (' + gesture + ')')
+            print('Shutdown requested! BYE BYE')
             sys.exit(0)
 
 
