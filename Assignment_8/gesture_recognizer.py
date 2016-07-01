@@ -10,12 +10,30 @@ import gesture_classifier as gc
 import csv
 
 UI_FILE = 'gesture_recognizer.ui'
-HELP_TEXT = 'HELP TEXT'
+HELP_TEXT = 'Default gestures:\n\n\n' \
+            'Triangle: start at top point and draw the triangle clockwise\n\n' \
+            'Circle: draw the circle counter-clockwise beginning at the ' \
+            'top left\n\n' \
+            'Caret: draw the caret from bottom left to the top to the ' \
+            'bottom right'
 
 
 class TrainingsDataReader:
+    """
+    Helper class for csv-file reading containing point data
+    """
+
     @staticmethod
     def get_trainings_data(file):
+        """
+        reads a csv file by row and assigns the retrieved row to a list which is
+        returned
+
+        :param file: the file to read
+
+        :return: the list containing all retrieved points
+        """
+
         values = []
 
         with open(file, "r", newline='') as csvfile:
@@ -206,6 +224,15 @@ class Window(Qt.QMainWindow):
             QtCore.Qt.ActionsContextMenu)
 
     def add_default_gesture(self, name, action_index):
+        """
+        adds a default gesture to the classifier and list widget
+
+        :param name: the name of the gesture
+        :param action_index: the index of its assigned action
+
+        :return: void
+        """
+
         pts = TrainingsDataReader.get_trainings_data(name + '.csv')
         self.draw_widget.classifier.add_gesture(name, pts)
         self.gesture_list_widget.addItem(name)
